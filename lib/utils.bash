@@ -4,7 +4,7 @@ set -euo pipefail
 
 # TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for titan.
 GH_REPO="https://github.com/titan-data/titan"
-TOOL_NAME="titan"
+TOOL_NAME="titan-cli"
 TOOL_TEST="titan --version"
 
 fail() {
@@ -41,8 +41,7 @@ download_release() {
   version="$1"
   filename="$2"
 
-  # TODO: Adapt the release URL convention for titan
-  url="$GH_REPO/archive/v${version}.tar.gz"
+  url="$GH_REPO/releases/download/${version}/$TOOL_NAME-$version-$(get_platform)_$(get_arch).$(get_extension)"
 
   echo "* Downloading $TOOL_NAME release $version..."
   curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
@@ -58,8 +57,8 @@ install_version() {
   fi
 
   (
-    mkdir -p "$install_path"
-    cp -r "$ASDF_DOWNLOAD_PATH"/* "$install_path"
+    mkdir -p "$install_path"/bin
+    cp -r "$ASDF_DOWNLOAD_PATH"/* "$install_path"/bin/
 
     # TODO: Asert titan executable exists.
     local tool_cmd
@@ -68,7 +67,42 @@ install_version() {
 
     echo "$TOOL_NAME $version installation was successful!"
   ) || (
-    rm -rf "$install_path"
+    #rm -rf "$install_path"
     fail "An error ocurred while installing $TOOL_NAME $version."
   )
+}
+
+get_extension() {
+  if [ "$(get_platform)" == "linux" ]; then
+    echo "tar"
+  else
+    echo "zip"
+  fi
+}
+
+get_arch() {
+  local arch
+  arch=$(uname -m)
+  case $arch in
+  "x86_64")
+    echo "amd64"
+    ;;
+  "i386" | "i686")
+    echo "386"
+    ;;
+  "arm")
+    echo "arm"
+    ;;
+  "aarch64" | "arm64")
+    echo "arm64"
+    ;;
+  *)
+    exit 1
+    ;;
+  esac
+
+}
+
+get_platform() {
+  echo "$(uname | tr '[:upper:]' '[:lower:]')"
 }
